@@ -8,7 +8,7 @@ use grid::GridPlugin;
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::rgb(0.4, 0.2, 0.3)))
+        .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
         .add_plugins(DefaultPlugins)
         .add_plugins(CameraPlugin)
         .add_plugins(GridPlugin)
