@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 
 pub const GRID_CELL_SIZE: f32 = 4.0;
-pub const GRID_WIDTH: i32 = 250;
-pub const GRID_HEIGHT: i32 = 125;
+pub const GRID_SIZE: i32 = 120;
 
 pub struct GridPlugin;
 
@@ -57,14 +56,14 @@ fn spawn_cells(mut commands: Commands) {
         ..shapes::RegularPolygon::default()
     };
 
-    for y in 0..GRID_HEIGHT {
-        for x in 0..GRID_WIDTH {
+    for y in 0..GRID_SIZE {
+        for x in 0..GRID_SIZE {
             commands.spawn((
                 ShapeBundle {
                     path: GeometryBuilder::build_as(&shape),
                     spatial: SpatialBundle::from_transform(Transform::from_xyz(
-                        (x - GRID_WIDTH / 2) as f32 * GRID_CELL_SIZE,
-                        (y - GRID_HEIGHT / 2) as f32 * GRID_CELL_SIZE,
+                        (x - GRID_SIZE / 2) as f32 * GRID_CELL_SIZE,
+                        (y - GRID_SIZE / 2) as f32 * GRID_CELL_SIZE,
                         0.0,
                     )),
                     ..default()
@@ -87,8 +86,8 @@ fn spawn_grid(mut commands: Commands) {
 
 fn pop_density_vec(mut query: Query<&mut GridDensity, With<Grid>>) {
     if let Ok(mut density_vec) = query.get_single_mut() {
-        for _ in 0..GRID_HEIGHT {
-            for _ in 0..GRID_WIDTH {
+        for _ in 0..GRID_SIZE {
+            for _ in 0..GRID_SIZE {
                 density_vec.grid_density_vec.push(300.0);
             }
         }
