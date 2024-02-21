@@ -82,8 +82,27 @@ fn diffuse(b: i32, x: &mut [f32], x0: &mut [f32], diff: f32, dt: f32, iter: i32,
     lin_solve(b, x, x0, a, 1.0 + 6.0 * a, iter, n)
 }
 
-fn project() {
-    //
+fn project(
+    veloc_x: &mut [f32],
+    veloc_y: &mut [f32],
+    p: &mut [f32],
+    div: &mut [f32],
+    iter: i32,
+    n: i32,
+) {
+    for j in 1..n - 1 {
+        for i in 1..n - 1 {
+            div[index(i, j)] = -0.5
+                * (veloc_x[index(i + 1, j)] - veloc_x[index(i - 1, j)] + veloc_y[index(i, j + 1)]
+                    - veloc_y[index(i, j - 1)])
+                / n as f32;
+            p[index(i, j)] = 0.0;
+        }
+    }
+    set_bnd(0, div, n);
+    set_bnd(0, p, n);
+    lin_solve(0, p, div, 1.0, 6.0, iter, n);
+    // second for loop
 }
 
 fn index(x: i32, y: i32) -> usize {
