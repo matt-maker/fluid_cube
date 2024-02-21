@@ -2,6 +2,8 @@ use bevy::prelude::*;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum SimulationSet {
+    AddDensity,
+    AddVelocity,
     UpdateCells,
 }
 
@@ -12,17 +14,18 @@ impl Plugin for SchudulePlugin {
         app.configure_sets(
             Update,
             (
-                //SimulationSet::OtherSystem,
+                SimulationSet::AddDensity,
+                SimulationSet::AddVelocity,
                 //flush
                 SimulationSet::UpdateCells,
             )
                 .chain(),
+        )
+        .add_systems(
+            Update,
+            apply_deferred
+                .after(SimulationSet::AddVelocity)
+                .before(SimulationSet::UpdateCells),
         );
-        //.add_systems(
-        //Update,
-        //apply_deferred
-        //.after(SimulationSet::OtherSystem)
-        //.before(SimulationSet::UpdateCells),
-        //);
     }
 }
