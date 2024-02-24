@@ -41,18 +41,40 @@ fn add_velocity(
     }
 }
 
-// *** helper funcitons ***
 // pass vectors in x.as_mut_slice() (&mut [T])
 fn set_bnd(b: i32, x: &mut [f32], n: i32) {
-    for j in 1..(n - 1) {
+    for _ in 1..(n - 1) {
         for i in 1..(n - 1) {
-            x[index(i, j)] = if b == 3 {
-                -x[index(i, j)]
+            x[index(i, 0)] = if b == 2 {
+                -x[index(i, 1)]
             } else {
-                x[index(i, j)]
+                x[index(i, 1)]
             };
+
+            x[index(i, n - 1)] = if b == 2 {
+                -x[index(i, n - 2)]
+            } else {
+                x[index(i, n - 2)]
+            }
         }
     }
+
+    for _ in 1..(n - 1) {
+        for j in 1..(n - 1) {
+            x[index(0, j)] = if b == 1 {
+                -x[index(1, j)]
+            } else {
+                x[index(1, j)]
+            };
+
+            x[index(n - 1, j)] = if b == 1 {
+                -x[index(n - 2, j)]
+            } else {
+                x[index(n - 2, j)]
+            }
+        }
+    }
+
     x[index(0, 0)] = 0.33 * (x[index(1, 0)] + x[index(0, 1)] + x[index(0, 0)]);
     x[index(0, n - 1)] = 0.33 * (x[index(1, n - 1)] + x[index(0, n - 2)] + x[index(0, n - 1)]);
     x[index(n - 1, 0)] = 0.33 * (x[index(n - 2, 0)] + x[index(n - 1, 1)] + x[index(n - 1, 0)]);
@@ -75,6 +97,14 @@ fn lin_solve(b: i32, x: &mut [f32], x0: &mut [f32], a: f32, c: f32, iter: i32, n
         }
     }
     set_bnd(b, x, n);
+}
+
+fn index(x: i32, y: i32) -> usize {
+    (x + (y * GRID_SIZE)) as usize
+}
+
+fn diffuse_all() {
+    //
 }
 
 fn diffuse(b: i32, x: &mut [f32], x0: &mut [f32], diff: f32, dt: f32, iter: i32, n: i32) {
@@ -102,9 +132,69 @@ fn project(
     set_bnd(0, div, n);
     set_bnd(0, p, n);
     lin_solve(0, p, div, 1.0, 6.0, iter, n);
-    // second for loop
+
+    for j in 1..n - 1 {
+        for i in 1..n - 1 {
+            veloc_x[index(i, j)] -= 0.5 * (p[index(i + 1, j)] - p[index(i - 1, j)]) * n as f32;
+            veloc_y[index(i, j)] -= 0.5 * (p[index(i, j + 1)] - p[index(i, j - 1)]) * n as f32;
+        }
+    }
+    set_bnd(1, veloc_x, n);
+    set_bnd(2, veloc_y, n);
 }
 
-fn index(x: i32, y: i32) -> usize {
-    (x + (y * GRID_SIZE)) as usize
+fn advect(
+    b: i32,
+    d: &mut [f32],
+    d0: &mut [f32],
+    veloc_x: &mut [f32],
+    veloc_y: &mut [f32],
+    dt: f32,
+    n: i32,
+) {
+    let (dtx, dty): (f32, f32) = ((dt * (n as f32 - 2.0)), (dt * (n as f32 - 2.0)));
+    let nfloat = n;
+    let mut jfloat = 1.0;
+
+    for j in 1..n - 1 {
+        jfloat += 1.0;
+        let mut ifloat = 1.0;
+        for i in 1..n - 1 {
+            ifloat += 1.0;
+            let tmp1 = dtx * veloc_x[index(i, j)];
+            let tmp2 = dty * veloc_y[index(i, j)];
+            let mut x = ifloat - tmp1;
+            let mut y = jfloat - tmp2;
+
+            if x < 0.5 {
+                x = 0.5
+            };
+            if x > nfloat as f32 + 0.5 {
+                x = nfloat as f32 + 0.5
+            };
+            let i0 = x.floor();
+            let i1 = i0 + 1.0;
+
+            if y < 0.5 {
+                y = 0.5
+            };
+            if y > nfloat as f32 + 0.5 {
+                y = nfloat as f32 + 0.5
+            };
+            let j0 = y.floor();
+            let j1 = j0 + 1.0;
+
+            let s1 = x - i0;
+            let s0 = 1.0 - s1;
+            let t1 = y - j0;
+            let t0 = 1.0 - t1;
+
+            let (i0i, i1i, j0i, j1i): (i32, i32, i32, i32) =
+                (i0 as i32, i1 as i32, j0 as i32, j1 as i32);
+
+            d[index(i, j)] = s0 * ((t0 * d0[index(i0i, j0i)]) + (t1 * d0[index(i0i, j1i)]))
+                + s1 * ((t0 * d0[index(i1i, j0i)]) + (t1 * d0[index(i1i, j1i)]));
+        }
+    }
+    set_bnd(b, d, n);
 }
