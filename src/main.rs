@@ -5,11 +5,13 @@ mod camera_2d;
 mod grid;
 mod schedule;
 mod simulation;
+mod user_input;
 
 use camera_2d::CameraPlugin;
 use grid::GridPlugin;
 use schedule::SchudulePlugin;
 use simulation::SimulationPlugin;
+use user_input::UserInput;
 
 fn main() {
     App::new()
@@ -20,6 +22,7 @@ fn main() {
         .add_plugins(CameraPlugin)
         .add_plugins(SimulationPlugin)
         .add_plugins(GridPlugin)
+        .add_plugins(UserInput)
         .add_plugins(SchudulePlugin)
         .run();
 }
