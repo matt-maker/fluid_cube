@@ -1,4 +1,7 @@
-use crate::grid::{AmountVel, Amountd, Density, Grid, GridPos, GRID_SIZE, V};
+use crate::grid::{
+    AmountVelX, AmountVelY, Amountd, Density, Diff, Dt, Grid, GridPosX, GridPosY, Visc, GRID_SIZE,
+    S, V0X, V0Y, VX, VY,
+};
 use crate::schedule::SimulationSet;
 use bevy::prelude::*;
 
@@ -6,36 +9,39 @@ pub struct SimulationPlugin;
 
 impl Plugin for SimulationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, add_density.in_set(SimulationSet::AddDensity));
-        app.add_systems(Update, add_velocity.in_set(SimulationSet::AddVelocity));
+        app.add_systems(
+            Update,
+            diffuse_velocities.in_set(SimulationSet::DiffuseVelocities),
+        );
+        app.add_systems(Update, project_v0.in_set(SimulationSet::ProjectV0));
     }
 }
 
 fn add_density(
     mut query_density: Query<&mut Density, With<Grid>>,
-    query_gridpos: Query<&GridPos, With<Grid>>,
+    query_gridpos: Query<(&GridPosX, &GridPosY), With<Grid>>,
     query_amount: Query<&Amountd, With<Grid>>,
 ) {
     if let Ok(mut grid_density) = query_density.get_single_mut() {
-        if let Ok(gridpos) = query_gridpos.get_single() {
+        if let Ok((gridposx, gridposy)) = query_gridpos.get_single() {
             if let Ok(amount) = query_amount.get_single() {
-                grid_density.density[index(gridpos.x, gridpos.y)] += amount.amountd;
+                grid_density.density[index(gridposx.x, gridposy.y)] += amount.amountd;
             }
         }
     }
 }
 
 fn add_velocity(
-    mut query_vel: Query<&mut V, With<Grid>>,
-    query_gridpos: Query<&GridPos, With<Grid>>,
-    query_amount: Query<&AmountVel, With<Grid>>,
+    mut query_vel: Query<(&mut VX, &mut VY), With<Grid>>,
+    query_gridpos: Query<(&GridPosX, &GridPosY), With<Grid>>,
+    query_amount: Query<(&AmountVelX, &AmountVelY), With<Grid>>,
 ) {
-    if let Ok(mut grid_vel) = query_vel.get_single_mut() {
-        if let Ok(gridpos) = query_gridpos.get_single() {
-            if let Ok(amount) = query_amount.get_single() {
-                let index: usize = index(gridpos.x, gridpos.y);
-                grid_vel.vx[index] += amount.amountx;
-                grid_vel.vy[index] += amount.amounty;
+    if let Ok((mut grid_vel_x, mut grid_vel_y)) = query_vel.get_single_mut() {
+        if let Ok((gridposx, gridposy)) = query_gridpos.get_single() {
+            if let Ok((amountx, amounty)) = query_amount.get_single() {
+                let index: usize = index(gridposx.x, gridposy.y);
+                grid_vel_x.vx[index] += amountx.amountx;
+                grid_vel_y.vy[index] += amounty.amounty;
             }
         }
     }
@@ -43,8 +49,8 @@ fn add_velocity(
 
 // pass vectors in x.as_mut_slice() (&mut [T])
 fn set_bnd(b: i32, x: &mut [f32], n: i32) {
-    for _ in 1..(n - 1) {
-        for i in 1..(n - 1) {
+    for _ in 1..n - 1 {
+        for i in 1..n - 1 {
             x[index(i, 0)] = if b == 2 {
                 -x[index(i, 1)]
             } else {
@@ -59,8 +65,8 @@ fn set_bnd(b: i32, x: &mut [f32], n: i32) {
         }
     }
 
-    for _ in 1..(n - 1) {
-        for j in 1..(n - 1) {
+    for _ in 1..n - 1 {
+        for j in 1..n - 1 {
             x[index(0, j)] = if b == 1 {
                 -x[index(1, j)]
             } else {
@@ -85,8 +91,8 @@ fn set_bnd(b: i32, x: &mut [f32], n: i32) {
 fn lin_solve(b: i32, x: &mut [f32], x0: &mut [f32], a: f32, c: f32, iter: i32, n: i32) {
     let c_recip = 1.0 / c;
     for _ in 0..iter {
-        for j in 0..n {
-            for i in 0..n {
+        for j in 1..n - 1 {
+            for i in 1..n - 1 {
                 x[index(i, j)] = (x0[index(i, j)]
                     + a * (x[index(i + 1, j)]
                         + x[index(i - 1, j)]
@@ -103,8 +109,33 @@ fn index(x: i32, y: i32) -> usize {
     (x + (y * GRID_SIZE)) as usize
 }
 
-fn diffuse_all() {
-    //
+fn diffuse_velocities(
+    mut query_vel: Query<(&mut VX, &mut VY, &mut V0X, &mut V0Y), With<Grid>>,
+    query_scene: Query<(&Visc, &Dt), With<Grid>>,
+) {
+    if let Ok((mut vx, mut vy, mut v0x, mut v0y)) = query_vel.get_single_mut() {
+        if let Ok((visc, dt)) = query_scene.get_single() {
+            diffuse(
+                1,
+                v0x.vx0.as_mut_slice(),
+                vx.vx.as_mut_slice(),
+                visc.visc,
+                dt.dt,
+                4,
+                GRID_SIZE,
+            );
+
+            diffuse(
+                2,
+                v0y.vy0.as_mut_slice(),
+                vy.vy.as_mut_slice(),
+                visc.visc,
+                dt.dt,
+                4,
+                GRID_SIZE,
+            );
+        }
+    }
 }
 
 fn diffuse(b: i32, x: &mut [f32], x0: &mut [f32], diff: f32, dt: f32, iter: i32, n: i32) {
@@ -141,6 +172,19 @@ fn project(
     }
     set_bnd(1, veloc_x, n);
     set_bnd(2, veloc_y, n);
+}
+
+fn project_v0(mut query_vel: Query<(&mut V0X, &mut V0Y, &mut VX, &mut VY), With<Grid>>) {
+    if let Ok((mut v0x, mut v0y, mut vx, mut vy)) = query_vel.get_single_mut() {
+        project(
+            v0x.vx0.as_mut_slice(),
+            v0y.vy0.as_mut_slice(),
+            vx.vx.as_mut_slice(),
+            vy.vy.as_mut_slice(),
+            4,
+            GRID_SIZE,
+        );
+    }
 }
 
 fn advect(

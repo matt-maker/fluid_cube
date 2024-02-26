@@ -49,14 +49,24 @@ impl Amountd {
 }
 
 #[derive(Component, Debug)]
-pub struct AmountVel {
+pub struct AmountVelX {
     pub amountx: f32,
+}
+
+impl AmountVelX {
+    pub fn new(amountx: f32) -> Self {
+        Self { amountx }
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct AmountVelY {
     pub amounty: f32,
 }
 
-impl AmountVel {
-    pub fn new(amountx: f32, amounty: f32) -> Self {
-        Self { amountx, amounty }
+impl AmountVelY {
+    pub fn new(amounty: f32) -> Self {
+        Self { amounty }
     }
 }
 
@@ -127,38 +137,68 @@ impl Density {
 }
 
 #[derive(Component, Debug)]
-pub struct V {
+pub struct VX {
     pub vx: Vec<f32>,
+}
+
+impl VX {
+    pub fn new(vx: Vec<f32>) -> Self {
+        Self { vx }
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct VY {
     pub vy: Vec<f32>,
 }
 
-impl V {
-    pub fn new(vx: Vec<f32>, vy: Vec<f32>) -> Self {
-        Self { vx, vy }
+impl VY {
+    pub fn new(vy: Vec<f32>) -> Self {
+        Self { vy }
     }
 }
 
 #[derive(Component, Debug)]
-pub struct V0 {
+pub struct V0X {
     pub vx0: Vec<f32>,
+}
+
+impl V0X {
+    pub fn new(vx0: Vec<f32>) -> Self {
+        Self { vx0 }
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct V0Y {
     pub vy0: Vec<f32>,
 }
 
-impl V0 {
-    pub fn new(vx0: Vec<f32>, vy0: Vec<f32>) -> Self {
-        Self { vx0, vy0 }
+impl V0Y {
+    pub fn new(vy0: Vec<f32>) -> Self {
+        Self { vy0 }
     }
 }
 
 #[derive(Component, Debug)]
-pub struct GridPos {
+pub struct GridPosX {
     pub x: i32,
+}
+
+impl GridPosX {
+    pub fn new(x: i32) -> Self {
+        Self { x }
+    }
+}
+
+#[derive(Component, Debug)]
+pub struct GridPosY {
     pub y: i32,
 }
 
-impl GridPos {
-    pub fn new(x: i32, y: i32) -> Self {
-        Self { x, y }
+impl GridPosY {
+    pub fn new(y: i32) -> Self {
+        Self { y }
     }
 }
 
@@ -179,14 +219,19 @@ pub struct GridBundle {
     pub b: B,
     pub density: Density,
 
-    pub v: V,
+    pub vx: VX,
+    pub vy: VY,
 
-    pub v0: V0,
+    pub v0x: V0X,
+    pub v0y: V0Y,
 
     pub grid_density: GridDensity,
-    pub grid_pos: GridPos,
+
+    pub grid_pos_x: GridPosX,
+    pub grid_pos_y: GridPosY,
     pub amountd: Amountd,
-    pub amountvel: AmountVel,
+    pub amountvel_x: AmountVelX,
+    pub amountvel_y: AmountVelY,
 }
 
 fn update_cells(
@@ -237,21 +282,20 @@ fn spawn_grid(mut commands: Commands) {
             diff: Diff::new(0.0),
             visc: Visc::new(0.0),
             amountd: Amountd::new(0.0),
-            amountvel: AmountVel::new(0.0, 0.0),
-            grid_pos: GridPos::new(0, 0),
+
+            amountvel_x: AmountVelX::new(0.0),
+            amountvel_y: AmountVelY::new(0.0),
+            grid_pos_x: GridPosX::new(0),
+            grid_pos_y: GridPosY::new(0),
 
             s: S::new(vec![0.0; (GRID_SIZE * GRID_SIZE) as usize]),
             density: Density::new(vec![0.0; (GRID_SIZE * GRID_SIZE) as usize]),
 
-            v: V::new(
-                vec![0.0; (GRID_SIZE * GRID_SIZE) as usize],
-                vec![0.0; (GRID_SIZE * GRID_SIZE) as usize],
-            ),
+            vx: VX::new(vec![0.0; (GRID_SIZE * GRID_SIZE) as usize]),
+            vy: VY::new(vec![0.0; (GRID_SIZE * GRID_SIZE) as usize]),
 
-            v0: V0::new(
-                vec![0.0; (GRID_SIZE * GRID_SIZE) as usize],
-                vec![0.0; (GRID_SIZE * GRID_SIZE) as usize],
-            ),
+            v0x: V0X::new(vec![0.0; (GRID_SIZE * GRID_SIZE) as usize]),
+            v0y: V0Y::new(vec![0.0; (GRID_SIZE * GRID_SIZE) as usize]),
 
             grid_density: GridDensity::new(vec![300.0; (GRID_SIZE * GRID_SIZE) as usize]),
         },

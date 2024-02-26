@@ -22,7 +22,7 @@ fn main() {
         .add_plugins(CameraPlugin)
         .add_plugins(SimulationPlugin)
         .add_plugins(GridPlugin)
-        .add_plugins(UserInput)
+        //.add_plugins(UserInput)
         .add_plugins(SchudulePlugin)
         .run();
 }
