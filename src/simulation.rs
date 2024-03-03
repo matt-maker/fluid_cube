@@ -14,6 +14,16 @@ impl Plugin for SimulationPlugin {
             diffuse_velocities.in_set(SimulationSet::DiffuseVelocities),
         );
         app.add_systems(Update, project_v0.in_set(SimulationSet::ProjectV0));
+        app.add_systems(
+            Update,
+            advect_velocities.in_set(SimulationSet::AdvectVelocities),
+        );
+        app.add_systems(Update, project_v.in_set(SimulationSet::ProjectV));
+        app.add_systems(
+            Update,
+            diffuse_density.in_set(SimulationSet::DiffuseDensity),
+        );
+        app.add_systems(Update, advect_density.in_set(SimulationSet::AdvectDensity));
     }
 }
 
@@ -109,6 +119,82 @@ fn index(x: i32, y: i32) -> usize {
     (x + (y * GRID_SIZE)) as usize
 }
 
+fn advect_density(
+    query_vel: Query<(&VX, &VY), With<Grid>>,
+    mut query_s: Query<&mut S, With<Grid>>,
+    query_density: Query<&Density, With<Grid>>,
+    query_scene: Query<&Dt, With<Grid>>,
+) {
+    if let Ok((vx, vy)) = query_vel.get_single() {
+        if let Ok(density) = query_density.get_single() {
+            if let Ok(mut s) = query_s.get_single_mut() {
+                if let Ok(dt) = query_scene.get_single() {
+                    advect(
+                        0,
+                        s.s.as_mut_slice(),
+                        density.density.as_slice(),
+                        vx.vx.as_slice(),
+                        vy.vy.as_slice(),
+                        dt.dt,
+                        GRID_SIZE,
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn advect_velocities(
+    mut query_vel: Query<(&mut VX, &mut VY), With<Grid>>,
+    query_vel_0: Query<(&V0X, &V0Y), With<Grid>>,
+    query_scene: Query<&Dt, With<Grid>>,
+) {
+    if let Ok((mut vx, mut vy)) = query_vel.get_single_mut() {
+        if let Ok((v0x, v0y)) = query_vel_0.get_single() {
+            if let Ok(dt) = query_scene.get_single() {
+                advect(
+                    1,
+                    vx.vx.as_mut_slice(),
+                    v0x.vx0.as_slice(),
+                    v0x.vx0.as_slice(),
+                    v0y.vy0.as_slice(),
+                    dt.dt,
+                    GRID_SIZE,
+                );
+
+                advect(
+                    2,
+                    vy.vy.as_mut_slice(),
+                    v0y.vy0.as_slice(),
+                    v0x.vx0.as_slice(),
+                    v0y.vy0.as_slice(),
+                    dt.dt,
+                    GRID_SIZE,
+                );
+            }
+        }
+    }
+}
+
+fn diffuse_density(
+    mut query_vel: Query<(&mut S, &mut Density), With<Grid>>,
+    query_scene: Query<(&Dt, &Diff), With<Grid>>,
+) {
+    if let Ok((mut s, mut density)) = query_vel.get_single_mut() {
+        if let Ok((dt, diff)) = query_scene.get_single() {
+            diffuse(
+                0,
+                s.s.as_mut_slice(),
+                density.density.as_mut_slice(),
+                diff.diff,
+                dt.dt,
+                4,
+                GRID_SIZE,
+            );
+        }
+    }
+}
+
 fn diffuse_velocities(
     mut query_vel: Query<(&mut VX, &mut VY, &mut V0X, &mut V0Y), With<Grid>>,
     query_scene: Query<(&Visc, &Dt), With<Grid>>,
@@ -187,23 +273,28 @@ fn project_v0(mut query_vel: Query<(&mut V0X, &mut V0Y, &mut VX, &mut VY), With<
     }
 }
 
-fn advect(
-    b: i32,
-    d: &mut [f32],
-    d0: &mut [f32],
-    veloc_x: &mut [f32],
-    veloc_y: &mut [f32],
-    dt: f32,
-    n: i32,
-) {
+fn project_v(mut query_vel: Query<(&mut V0X, &mut V0Y, &mut VX, &mut VY), With<Grid>>) {
+    if let Ok((mut v0x, mut v0y, mut vx, mut vy)) = query_vel.get_single_mut() {
+        project(
+            vx.vx.as_mut_slice(),
+            vy.vy.as_mut_slice(),
+            v0x.vx0.as_mut_slice(),
+            v0y.vy0.as_mut_slice(),
+            4,
+            GRID_SIZE,
+        );
+    }
+}
+
+fn advect(b: i32, d: &mut [f32], d0: &[f32], veloc_x: &[f32], veloc_y: &[f32], dt: f32, n: i32) {
     let (dtx, dty): (f32, f32) = ((dt * (n as f32 - 2.0)), (dt * (n as f32 - 2.0)));
     let nfloat = n;
     let mut jfloat = 1.0;
 
-    for j in 1..n - 1 {
+    for j in 1..n - 2 {
         jfloat += 1.0;
         let mut ifloat = 1.0;
-        for i in 1..n - 1 {
+        for i in 1..n - 2 {
             ifloat += 1.0;
             let tmp1 = dtx * veloc_x[index(i, j)];
             let tmp2 = dty * veloc_y[index(i, j)];

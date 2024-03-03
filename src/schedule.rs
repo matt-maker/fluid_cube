@@ -4,6 +4,10 @@ use bevy::prelude::*;
 pub enum SimulationSet {
     DiffuseVelocities,
     ProjectV0,
+    AdvectVelocities,
+    ProjectV,
+    DiffuseDensity,
+    AdvectDensity,
     UpdateCells,
 }
 
@@ -16,6 +20,10 @@ impl Plugin for SchudulePlugin {
             (
                 SimulationSet::DiffuseVelocities,
                 SimulationSet::ProjectV0,
+                SimulationSet::AdvectVelocities,
+                SimulationSet::ProjectV,
+                SimulationSet::DiffuseDensity,
+                SimulationSet::AdvectDensity,
                 //flush
                 SimulationSet::UpdateCells,
             )
@@ -24,7 +32,7 @@ impl Plugin for SchudulePlugin {
         .add_systems(
             Update,
             apply_deferred
-                .after(SimulationSet::ProjectV0)
+                .after(SimulationSet::AdvectDensity)
                 .before(SimulationSet::UpdateCells),
         );
     }
