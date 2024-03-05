@@ -27,17 +27,6 @@ impl GridDensity {
 }
 
 #[derive(Component, Debug)]
-pub struct Size {
-    pub size: i32,
-}
-
-impl Size {
-    pub fn new(size: i32) -> Self {
-        Self { size }
-    }
-}
-
-#[derive(Component, Debug)]
 pub struct Amountd {
     pub amountd: f32,
 }
@@ -210,7 +199,6 @@ pub struct Grid;
 
 #[derive(Bundle)]
 pub struct GridBundle {
-    pub size: Size,
     pub dt: Dt,
     pub diff: Diff,
     pub visc: Visc,
@@ -276,15 +264,14 @@ fn spawn_cells(mut commands: Commands) {
 fn spawn_grid(mut commands: Commands) {
     commands.spawn((
         GridBundle {
-            size: Size::new(0),
             b: B::new(0),
             dt: Dt::new(0.0),
             diff: Diff::new(0.0),
             visc: Visc::new(0.0),
             amountd: Amountd::new(0.0),
 
-            amountvel_x: AmountVelX::new(0.0),
-            amountvel_y: AmountVelY::new(0.0),
+            amountvel_x: AmountVelX::new(3.0),
+            amountvel_y: AmountVelY::new(3.0),
             grid_pos_x: GridPosX::new(0),
             grid_pos_y: GridPosY::new(0),
 
