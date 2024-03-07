@@ -192,6 +192,19 @@ impl GridPosY {
 }
 
 #[derive(Component, Debug)]
+pub struct AddDensityVelocity {
+    pub add_density_velocity: bool,
+}
+
+impl AddDensityVelocity {
+    pub fn new(add_density_velocity: bool) -> Self {
+        Self {
+            add_density_velocity,
+        }
+    }
+}
+
+#[derive(Component, Debug)]
 pub struct SimCells;
 
 #[derive(Component, Debug)]
@@ -199,6 +212,7 @@ pub struct Grid;
 
 #[derive(Bundle)]
 pub struct GridBundle {
+    pub add_density_velocity: AddDensityVelocity,
     pub dt: Dt,
     pub diff: Diff,
     pub visc: Visc,
@@ -264,11 +278,12 @@ fn spawn_cells(mut commands: Commands) {
 fn spawn_grid(mut commands: Commands) {
     commands.spawn((
         GridBundle {
+            add_density_velocity: AddDensityVelocity::new(false),
             b: B::new(0),
             dt: Dt::new(0.0),
             diff: Diff::new(0.0),
             visc: Visc::new(0.0),
-            amountd: Amountd::new(0.0),
+            amountd: Amountd::new(2.0),
 
             amountvel_x: AmountVelX::new(3.0),
             amountvel_y: AmountVelY::new(3.0),
